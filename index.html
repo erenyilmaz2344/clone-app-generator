@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asset Generator — Figma</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pica@9.0.1/dist/pica.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f5f4; --surface: #ffffff; --border: #e5e5e3; --border-hover: #d0d0ce;
+  --text: #1a1a18; --text-2: #6b6b68; --text-3: #a8a8a5; --accent-light: #f0f0ee;
+  --success: #16a34a; --success-bg: #f0fdf4; --success-border: #bbf7d0;
+  --error: #dc2626; --error-bg: #fef2f2; --error-border: #fecaca;
+  --figma: #9747ff; --figma-bg: #f5f0ff; --figma-border: #ddd0ff;
+}
+
+body {
+  min-height: 100vh; background: var(--bg);
+  font-family: 'Inter', sans-serif; color: var(--text);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 48px 16px 80px;
+}
+
+.container { width: 100%; max-width: 600px; }
+
+/* header */
+.header { margin-bottom: 32px; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo img { width: 28px; height: 28px; border-radius: 7px; object-fit: cover; }
+.logo-name { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+.logo-badge { font-size: 10px; font-weight: 500; background: var(--figma-bg); color: var(--figma);
+  border: 1px solid var(--figma-border); border-radius: 4px; padding: 2px 7px;
+  font-family: 'JetBrains Mono', monospace; }
+.header-divider { height: 1px; background: var(--border); }
+
+.reset-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 12px; color: var(--text-2); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s; }
+.reset-btn:hover { border-color: var(--border-hover); color: var(--text); }
+
+/* steps */
+.steps { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+.step-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; transition: border-color .2s, box-shadow .2s; }
+.step-block.active { border-color: var(--border-hover); box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+.step-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+  border-bottom: 1px solid var(--border); background: #fafaf9; }
+.step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--bg);
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: var(--text-3); flex-shrink: 0; transition: all .2s; }
+.step-block.active .step-num { background: var(--text); border-color: var(--text); color: #fff; }
+.step-block.done .step-num { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
+.step-block.done .step-num::after { content: "✓"; }
+.step-block.done .step-num-inner { display: none; }
+.step-title { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.step-block.active .step-title { color: var(--text); }
+.step-value { margin-left: auto; font-size: 11px; color: var(--text-2);
+  font-family: 'JetBrains Mono', monospace; background: var(--accent-light); padding: 2px 8px; border-radius: 4px; }
+.step-body { padding: 16px; }
+
+/* inputs */
+.field-label { font-size: 10px; font-weight: 600; color: var(--text-3);
+  letter-spacing: .8px; text-transform: uppercase; margin-bottom: 5px; }
+.input-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.text-input { flex: 1; padding: 9px 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none;
+  transition: border-color .15s, box-shadow .15s; }
+.text-input:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(26,26,24,.07); }
+.text-input::placeholder { color: var(--text-3); }
+.text-input:disabled { background: var(--bg); opacity: .5; }
+.field-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+.field-hint.ok { color: var(--success); }
+.field-hint.error { color: var(--error); }
+.name-preview { margin-top: 4px; font-size: 11px; color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
+.name-preview span { color: var(--text); font-weight: 500; }
+
+/* figma info box */
+.figma-info { margin-bottom: 14px; padding: 10px 13px;
+  background: var(--figma-bg); border: 1px solid var(--figma-border); border-radius: 8px;
+  font-size: 11px; color: var(--figma); font-family: 'JetBrains Mono', monospace; line-height: 1.8; }
+.figma-info strong { font-weight: 600; }
+
+/* buttons */
+.btn-primary { padding: 8px 16px; background: var(--text); border: none; border-radius: 8px;
+  cursor: pointer; color: #fff; font-size: 12px; font-weight: 500;
+  font-family: 'Inter', sans-serif; transition: all .15s; white-space: nowrap; }
+.btn-primary:hover { background: #333; }
+.btn-primary:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; }
+.btn-danger { padding: 6px 10px; background: var(--error-bg); border: 1px solid var(--error-border);
+  border-radius: 8px; cursor: pointer; color: var(--error); font-size: 11px;
+  font-family: 'Inter', sans-serif; transition: all .15s; white-space: nowrap; }
+.btn-danger:hover { background: var(--error); color: #fff; }
+.btn-figma { padding: 9px 18px; background: var(--figma); border: none; border-radius: 8px;
+  cursor: pointer; color: #fff; font-size: 12px; font-weight: 500;
+  font-family: 'Inter', sans-serif; transition: opacity .15s;
+  display: flex; align-items: center; gap: 6px; }
+.btn-figma:hover { opacity: .88; }
+.btn-figma:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; opacity: 1; }
+
+/* figma status */
+.figma-status { margin-top: 12px; display: none; }
+.status-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--bg);
+  font-size: 12px; color: var(--text-2); margin-bottom: 5px; }
+.status-row.ok { border-color: var(--success-border); background: var(--success-bg); color: var(--success); }
+.status-row.error { border-color: var(--error-border); background: var(--error-bg); color: var(--error); }
+.status-row.loading { border-color: var(--figma-border); background: var(--figma-bg); color: var(--figma); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.status-frames { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.frame-tag { font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace; border: 1px solid var(--border);
+  background: var(--accent-light); color: var(--text-2); }
+.frame-tag.found { border-color: var(--success-border); background: var(--success-bg); color: var(--success); }
+.frame-tag.missing { border-color: var(--error-border); background: var(--error-bg); color: var(--error); }
+
+/* progress + export */
+.progress-wrap { margin-bottom: 10px; display: none; }
+.progress-info { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.progress-label, .progress-count { font-size: 11px; color: var(--text-2); }
+.progress-bar-bg { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--text); border-radius: 2px; transition: width .15s; width: 0%; }
+.export-btn { width: 100%; padding: 11px 0; background: var(--text); border: none; border-radius: 9px;
+  cursor: pointer; color: #fff; font-size: 13px; font-weight: 500;
+  font-family: 'Inter', sans-serif; transition: all .15s; }
+.export-btn:hover { background: #333; }
+.export-btn:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; }
+.hint { text-align: center; font-size: 11px; color: var(--text-3); margin-top: 7px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <img src="data:image/png;base64,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" alt="logo"/>
+        <span class="logo-name">Asset Generator</span>
+        <span class="logo-badge">Figma</span>
+      </div>
+      <button class="reset-btn" onclick="location.reload()">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sıfırla
+      </button>
+    </div>
+    <div class="header-divider"></div>
+  </div>
+
+  <div class="steps">
+
+    <!-- STEP 1 -->
+    <div class="step-block active" id="step1">
+      <div class="step-head">
+        <div class="step-num"><span class="step-num-inner">1</span></div>
+        <span class="step-title">Uygulama ismi</span>
+        <span class="step-value" id="appNameDisplay" style="display:none"></span>
+      </div>
+      <div class="step-body">
+        <div class="field-label">APP NAME</div>
+        <div class="input-row">
+          <input class="text-input" id="appNameInput" type="text" placeholder="örn: klaso" maxlength="40"
+            oninput="onNameInput(this)" onkeydown="if(event.key==='Enter') confirmName()"/>
+          <button class="btn-primary" id="confirmNameBtn" disabled onclick="confirmName()">Onayla</button>
+        </div>
+        <div class="field-hint" id="nameHint">küçük harf · bitişik · a-z 0-9</div>
+        <div class="name-preview" id="namePreview"></div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-block" id="step2">
+      <div class="step-head">
+        <div class="step-num"><span class="step-num-inner">2</span></div>
+        <span class="step-title">Figma bağlantısı</span>
+      </div>
+      <div class="step-body">
+
+        <div class="field-label">PERSONAL ACCESS TOKEN</div>
+        <div class="input-row">
+          <input class="text-input" id="figmaToken" type="password" placeholder="figd_..."
+            oninput="localStorage.setItem('figma_token', this.value)"/>
+          <button class="btn-danger" onclick="clearToken()">Sil</button>
+        </div>
+        <div class="field-hint" id="tokenHint" style="margin-bottom:14px">
+          Figma → Settings → Security → Personal access tokens
+        </div>
+
+        <div class="field-label">FIGMA FILE URL</div>
+        <div class="input-row">
+          <input class="text-input" id="figmaUrl" type="text" placeholder="https://www.figma.com/file/..."/>
+        </div>
+
+        <div class="figma-info" style="margin-top:14px">
+          <strong>Figma'da olması gereken frame isimleri:</strong><br>
+          app_icon · global · app_perspective<br>
+          bottom-background-img · bottom-logo · center-img<br>
+          first-purchase-center-img-a · logo · renewal_bonus_center_img<br>
+          + adım 1'de girdiğin isim (backend icon)
+        </div>
+
+        <button class="btn-figma" id="connectBtn" onclick="connectFigma()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="white" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Bağlan & frame'leri çek
+        </button>
+
+        <div class="figma-status" id="figmaStatus"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-block" id="step3">
+      <div class="step-head">
+        <div class="step-num"><span class="step-num-inner">3</span></div>
+        <span class="step-title">Export</span>
+      </div>
+      <div class="step-body">
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-info">
+            <span class="progress-label" id="progressLabel"></span>
+            <span class="progress-count" id="progressCount"></span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+        </div>
+        <button class="export-btn" id="exportBtn" disabled onclick="runExport()">Önce Figma'ya bağlan</button>
+        <p class="hint" id="hint"></p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────────────────────
+// Frame isimleri → çıktı dosyası mapping
+const FRAME_MAP = [
+  // icon_assets/
+  { name: "app_icon",        dest: "icon_assets",  format: "svg", outputName: "app_icon" },
+  // banners
+  { name: "global",          dest: "banners",      format: "png", outputName: "global",
+    sizes: [
+      { suffix: "@3x", w: 1002, h: 600 },
+      { suffix: "@2x", w: 668,  h: 400 },
+      { suffix: "",    w: 334,  h: 200 },
+    ]
+  },
+  { name: "app_perspective", dest: "banners",      format: "png", outputName: "app_perspective",
+    sizes: [
+      { suffix: "@3x", w: 883, h: 1035 },
+      { suffix: "@2x", w: 589, h: 690  },
+      { suffix: "",    w: 295, h: 345  },
+    ]
+  },
+  // icon_assets SVG'leri — frame adı: <appname>-app-icon vs.
+  { name: "_appname_-app-icon",   dest: "icon_assets", format: "svg", outputName: "app-icon"   },
+  { name: "_appname_-icon",       dest: "icon_assets", format: "svg", outputName: "icon"        },
+  { name: "_appname_-main-logo",  dest: "icon_assets", format: "svg", outputName: "main-logo"   },
+  { name: "_appname_-text-logo",  dest: "icon_assets", format: "svg", outputName: "text-logo"   },
+  // backend — frame isimleri Figma'daki gibi bırakıldı, outputName = dosya adı
+  { name: "bottom-background-img",       dest: "backend", format: "png", outputName: "bottom-background-img",       w: 594, h: 594 },
+  { name: "bottom-logo",                 dest: "backend", format: "png", outputName: "bottom-logo",                 w: 348, h: 73  },
+  { name: "center-img",                  dest: "backend", format: "png", outputName: "center-img",                  w: 981, h: 567 },
+  { name: "first-purchase-center-img-a", dest: "backend", format: "png", outputName: "first-purchase-center-img-a", w: 981, h: 567 },
+  { name: "logo",                        dest: "backend", format: "png", outputName: "logo",                        w: 348, h: 73  },
+  { name: "renewal_bonus_center_img",    dest: "backend", format: "png", outputName: "renewal_bonus_center_img",    w: 981, h: 567 },
+  // appname.png — frame adı dinamik, step 1'deki isimden gelir
+  { name: "_appname_",                   dest: "backend", format: "png", outputName: null, w: 512,  h: 512  },
+];
+
+// favicon & icon frames app_icon'dan üretilecek
+const FAVICON_SIZES = [
+  { suffix: "",     w: 128, h: 128 },
+  { suffix: "-16",  w: 16,  h: 16  },
+  { suffix: "-32",  w: 32,  h: 32  },
+  { suffix: "-64",  w: 64,  h: 64  },
+  { suffix: "-128", w: 128, h: 128 },
+  { suffix: "-512", w: 512, h: 512 },
+];
+const ICON_FILES = [
+  { name: "android-chrome-192x192.png",          w: 192, h: 192, maskable: false },
+  { name: "android-chrome-512x512.png",          w: 512, h: 512, maskable: false },
+  { name: "android-chrome-maskable-192x192.png", w: 192, h: 192, maskable: false },
+  { name: "android-chrome-maskable-512x512.png", w: 512, h: 512, maskable: true  },
+  { name: "apple-touch-icon.png",                w: 180, h: 180, maskable: false },
+  { name: "apple-touch-icon-60x60.png",          w: 60,  h: 60,  maskable: false },
+  { name: "apple-touch-icon-76x76.png",          w: 76,  h: 76,  maskable: false },
+  { name: "apple-touch-icon-120x120.png",        w: 120, h: 120, maskable: false },
+  { name: "apple-touch-icon-152x152.png",        w: 152, h: 152, maskable: false },
+  { name: "apple-touch-icon-167x167.png",        w: 167, h: 167, maskable: false },
+  { name: "msapplication-icon-144x144.png",      w: 144, h: 144, maskable: false },
+  { name: "mstile-150x150.png",                  w: 150, h: 150, maskable: false },
+];
+
+let appName = "";
+let figmaToken = "";
+// Sayfa yüklenince kaydedilmiş token'ı doldur
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("figma_token");
+  if (saved) {
+    document.getElementById("figmaToken").value = saved;
+    const hint = document.getElementById("tokenHint");
+    if (hint) hint.innerHTML = 'Token kaydedilmiş &nbsp;<span style="color:var(--success)">✓ hatırlandı</span> &nbsp;<span style="color:var(--text-3);cursor:pointer;text-decoration:underline" onclick="clearToken()">Sil</span>';
+  }
+});
+function clearToken() {
+  localStorage.removeItem("figma_token");
+  document.getElementById("figmaToken").value = "";
+  const hint = document.getElementById("tokenHint");
+  if (hint) hint.innerHTML = 'Figma → Settings → Security → Personal access tokens &nbsp;<span style="color:var(--success)">Tarayıcıda hatırlanır</span>';
+}
+let figmaFileId = "";
+let fetchedFrames = {}; // name → { id, width, height }
+
+// ── STEP 1 ───────────────────────────────────────────────────────────────────
+function onNameInput(inp) {
+  const c = inp.value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (inp.value !== c) inp.value = c;
+  const hint = document.getElementById("nameHint");
+  const prev = document.getElementById("namePreview");
+  const btn  = document.getElementById("confirmNameBtn");
+  if (!c) {
+    hint.textContent = "küçük harf · bitişik · a-z 0-9"; hint.className = "field-hint";
+    prev.innerHTML = ""; btn.disabled = true;
+  } else if (c.length < 2) {
+    hint.textContent = "En az 2 karakter"; hint.className = "field-hint error";
+    prev.innerHTML = ""; btn.disabled = true;
+  } else {
+    hint.textContent = "Geçerli isim"; hint.className = "field-hint ok";
+    prev.innerHTML = `public_<span>${c}</span>`;
+    btn.disabled = false;
+  }
+}
+
+function confirmName() {
+  const val = document.getElementById("appNameInput").value;
+  if (val.length < 2) return;
+  appName = val;
+  document.getElementById("appNameInput").disabled = true;
+  document.getElementById("confirmNameBtn").disabled = true;
+  document.getElementById("nameHint").style.display = "none";
+  document.getElementById("namePreview").style.display = "none";
+  const disp = document.getElementById("appNameDisplay");
+  disp.textContent = appName; disp.style.display = "inline-block";
+  document.getElementById("step1").classList.replace("active", "done");
+  document.getElementById("step2").classList.add("active");
+}
+
+// ── STEP 2: FIGMA ─────────────────────────────────────────────────────────────
+function extractFileId(url) {
+  const m = url.match(/figma\.com\/(?:file|design)\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+function showStatus(msg, type = "") {
+  const el = document.getElementById("figmaStatus");
+  el.style.display = "block";
+  el.innerHTML = `<div class="status-row ${type}"><div class="status-dot"></div>${msg}</div>`;
+}
+
+function showFrameStatus(found, missing) {
+  const el = document.getElementById("figmaStatus");
+  el.style.display = "block";
+
+  const foundTags  = found.map(n  => `<span class="frame-tag found">✓ ${n}</span>`).join("");
+  const missingTags = missing.map(n => `<span class="frame-tag missing">✕ ${n}</span>`).join("");
+
+  el.innerHTML = `
+    <div class="status-row ok"><div class="status-dot"></div>${found.length} frame bulundu</div>
+    ${missing.length ? `<div class="status-row error"><div class="status-dot"></div>${missing.length} frame eksik — opsiyonel</div>` : ""}
+    <div class="status-frames">${foundTags}${missingTags}</div>
+  `;
+}
+
+async function connectFigma() {
+  figmaToken = document.getElementById("figmaToken").value.trim();
+  if (figmaToken) localStorage.setItem("figma_token", figmaToken);
+  const url  = document.getElementById("figmaUrl").value.trim();
+
+  if (!figmaToken) { showStatus("Token girilmedi", "error"); return; }
+  figmaFileId = extractFileId(url);
+  if (!figmaFileId) { showStatus("Geçersiz Figma URL", "error"); return; }
+
+  showStatus("Figma'ya bağlanılıyor...", "loading");
+  document.getElementById("connectBtn").disabled = true;
+
+  try {
+    // Figma file'ından tüm frame'leri çek
+    const res = await fetch(
+      `https://api.figma.com/v1/files/${figmaFileId}?depth=2`,
+      { headers: { "X-Figma-Token": figmaToken } }
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      showStatus(`Figma hatası: ${err.message || res.status}`, "error");
+      document.getElementById("connectBtn").disabled = false;
+      return;
+    }
+    const data = await res.json();
+
+    // Tüm frame node'larını topla
+    const frames = {};
+    function walk(node) {
+      if (node.type === "FRAME" || node.type === "COMPONENT" || node.type === "VECTOR" || node.type === "GROUP") {
+        frames[node.name] = { id: node.id, w: node.absoluteBoundingBox?.width, h: node.absoluteBoundingBox?.height };
+      }
+      if (node.children) node.children.forEach(walk);
+    }
+    data.document.children.forEach(walk);
+
+    // FRAME_MAP ile eşleştir
+    const found   = [];
+    const missing = [];
+    fetchedFrames = {};
+
+    for (const fm of FRAME_MAP) {
+      // _appname_ → gerçek frame adı uygulama ismi
+      const lookupName = fm.name.replace(/_appname_/g, appName);
+      if (frames[lookupName]) {
+        fetchedFrames[lookupName] = { ...frames[lookupName], ...fm, name: lookupName };
+        found.push(lookupName);
+      } else {
+        missing.push(lookupName);
+      }
+    }
+
+    if (found.length === 0) {
+      showStatus("Hiç eşleşen frame bulunamadı. Frame isimlerini kontrol et.", "error");
+      document.getElementById("connectBtn").disabled = false;
+      return;
+    }
+
+    showFrameStatus(found, missing);
+    document.getElementById("step2").classList.replace("active", "done");
+    document.getElementById("step3").classList.add("active");
+
+    const total = calcExportTotal();
+    document.getElementById("exportBtn").disabled = false;
+    document.getElementById("exportBtn").textContent = `Export  —  ~${total} dosya`;
+
+  } catch (e) {
+    showStatus(`Bağlantı hatası: ${e.message}`, "error");
+    document.getElementById("connectBtn").disabled = false;
+  }
+}
+
+function calcExportTotal() {
+  let t = 0;
+  for (const fm of Object.values(fetchedFrames)) {
+    if (fm.dest === "icon_assets" && fm.outputName !== "app_icon") {
+      t += 1; // SVG
+    } else if (fm.name === "app_icon") {
+      t += FAVICON_SIZES.length * 2 + ICON_FILES.length + 1;
+    } else if (fm.sizes) {
+      t += fm.sizes.length * 2;
+    } else {
+      t += 1;
+    }
+  }
+  return t;
+}
+
+// ── PICA + ICO ───────────────────────────────────────────────────────────────
+const picaInstance = pica({ features: ["js", "wasm", "ww"] });
+
+async function resizeBlobFromBlob(srcBlob, w, h, mime) {
+  const bmp = await createImageBitmap(srcBlob);
+  const src = document.createElement("canvas");
+  src.width = bmp.width; src.height = bmp.height;
+  src.getContext("2d").drawImage(bmp, 0, 0);
+  const dst = document.createElement("canvas"); dst.width = w; dst.height = h;
+  await picaInstance.resize(src, dst, { filter: "lanczos3", unsharpAmount: 80, unsharpRadius: .6, unsharpThreshold: 2, alpha: true });
+  return await new Promise(res => dst.toBlob(res, mime === "image/webp" ? "image/webp" : "image/png"));
+}
+
+async function svgBlobToCanvas(svgBlob, w, h) {
+  const url = URL.createObjectURL(svgBlob);
+  const img = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.src = url; });
+  URL.revokeObjectURL(url);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  c.getContext("2d").drawImage(img, 0, 0, w, h);
+  return c;
+}
+
+async function pngToIco(pngBlob, size, canvas) {
+  const c = canvas;
+  const px = c.getContext("2d").getImageData(0, 0, size, size).data;
+  const bmpPx = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const s = (y*size+x)*4, d = ((size-1-y)*size+x)*4;
+    bmpPx[d]=px[s+2]; bmpPx[d+1]=px[s+1]; bmpPx[d+2]=px[s]; bmpPx[d+3]=px[s+3];
+  }
+  const bih = new ArrayBuffer(40); const dv = new DataView(bih);
+  dv.setUint32(0,40,true); dv.setInt32(4,size,true); dv.setInt32(8,size*2,true);
+  dv.setUint16(12,1,true); dv.setUint16(14,32,true); dv.setUint32(20,bmpPx.length,true);
+  const bmpSize = 40 + bmpPx.length;
+  const ico = new Uint8Array(6+16+bmpSize); const iv = new DataView(ico.buffer);
+  iv.setUint16(2,1,true); iv.setUint16(4,1,true);
+  ico[6]=size>=256?0:size; ico[7]=size>=256?0:size;
+  iv.setUint16(10,1,true); iv.setUint16(12,32,true);
+  iv.setUint32(14,bmpSize,true); iv.setUint32(18,22,true);
+  ico.set(new Uint8Array(bih),22); ico.set(bmpPx,62);
+  return new Blob([ico.buffer], { type: "image/x-icon" });
+}
+
+async function renderIconPng(svgBlob, w, h, maskable) {
+  const url = URL.createObjectURL(svgBlob);
+  const img = await new Promise(res => { const i = new Image(); i.onload=()=>res(i); i.src=url; });
+  URL.revokeObjectURL(url);
+  const c = document.createElement("canvas"); c.width=w; c.height=h;
+  const ctx = c.getContext("2d");
+  if (maskable) { const p=Math.round(w*.074); ctx.drawImage(img,p,p,w-p*2,h-p*2); }
+  else ctx.drawImage(img,0,0,w,h);
+  return await new Promise(res => c.toBlob(res,"image/png"));
+}
+
+// ── EXPORT ───────────────────────────────────────────────────────────────────
+async function fetchFigmaExport(nodeId, format, scale = 1) {
+  const res = await fetch(
+    `https://api.figma.com/v1/images/${figmaFileId}?ids=${nodeId}&format=${format}&scale=${scale}`,
+    { headers: { "X-Figma-Token": figmaToken } }
+  );
+  const data = await res.json();
+  const imgUrl = data.images?.[nodeId];
+  if (!imgUrl) throw new Error(`Image URL alınamadı: ${nodeId}`);
+  const imgRes = await fetch(imgUrl);
+  return await imgRes.blob();
+}
+
+async function runExport() {
+  const btn = document.getElementById("exportBtn");
+  const pw  = document.getElementById("progressWrap");
+  const pl  = document.getElementById("progressLabel");
+  const pc  = document.getElementById("progressCount");
+  const pb  = document.getElementById("progressBar");
+
+  const total = calcExportTotal();
+  let count = 0;
+  const upd = name => { pl.textContent=name; pc.textContent=`${count}/${total}`; pb.style.width=`${count/total*100}%`; };
+
+  btn.disabled = true; pw.style.display = "block";
+
+  const zip      = new JSZip();
+  const pubF     = `public_${appName}/`;
+  const iconsF   = `public_${appName}/img/icons/`;
+  const bannersF = `icon_assets/banners/${appName}/`;
+
+  zip.file("backend/.gitkeep", "");
+  zip.folder(bannersF);
+  zip.folder(`public_${appName}/img`);
+
+  try {
+    for (const [frameName, fm] of Object.entries(fetchedFrames)) {
+
+      // ── icon_assets SVG'leri ──
+      if (fm.dest === "icon_assets" && fm.format === "svg" && fm.outputName !== "app_icon") {
+        count++; upd(`${appName}-${fm.outputName}.svg`);
+        const svgBlob = await fetchFigmaExport(fm.id, "svg");
+        zip.file(`icon_assets/${appName}-${fm.outputName}.svg`, await svgBlob.text());
+
+      // ── app_icon → favicon + icons ──
+      } else if (frameName === "app_icon") {
+        upd("app_icon SVG çekiliyor...");
+        const svgBlob = await fetchFigmaExport(fm.id, "svg");
+
+        // safari-pinned-tab.svg
+        count++; upd("safari-pinned-tab.svg");
+        zip.file(iconsF + "safari-pinned-tab.svg", await svgBlob.text());
+
+        // favicon boyutları
+        const url = URL.createObjectURL(svgBlob);
+        const svgImg = await new Promise(res => { const i=new Image(); i.onload=()=>res(i); i.src=url; });
+        URL.revokeObjectURL(url);
+
+        for (const { suffix, w, h } of FAVICON_SIZES) {
+          count++; upd(`favicon${suffix}.png`);
+          const dst = document.createElement("canvas"); dst.width=w; dst.height=h;
+          dst.getContext("2d").drawImage(svgImg,0,0,w,h);
+          const png = await new Promise(res => dst.toBlob(res,"image/png"));
+          zip.file(pubF+`favicon${suffix}.png`, png);
+          count++; upd(`favicon${suffix}.ico`);
+          if (w === 512) zip.file(pubF+`favicon${suffix}.ico`, png);
+          else zip.file(pubF+`favicon${suffix}.ico`, await pngToIco(png, w, dst));
+          if (suffix==="-16"||suffix==="-32") zip.file(iconsF+`favicon${suffix}.png`, png);
+        }
+
+        // icon PNGs
+        for (const icon of ICON_FILES) {
+          count++; upd(icon.name);
+          zip.file(iconsF+icon.name, await renderIconPng(svgBlob, icon.w, icon.h, icon.maskable));
+        }
+
+      // ── banners ──
+      } else if (fm.sizes) {
+        upd(`${frameName} PNG çekiliyor...`);
+        const srcBlob = await fetchFigmaExport(fm.id, "png", 2); // 2x çek
+        for (const { suffix, w, h } of fm.sizes) {
+          count++; upd(`${fm.outputName}${suffix}.png`);
+          zip.file(bannersF+`${fm.outputName}${suffix}.png`, await resizeBlobFromBlob(srcBlob, w, h, "image/png"));
+          count++; upd(`${fm.outputName}${suffix}.webp`);
+          zip.file(bannersF+`${fm.outputName}${suffix}.webp`, await resizeBlobFromBlob(srcBlob, w, h, "image/webp"));
+        }
+
+      // ── backend ──
+      } else {
+        const outName = fm.outputName === null ? `${appName}.png` : `${fm.outputName}.png`;
+        count++; upd(outName);
+        const srcBlob = await fetchFigmaExport(fm.id, "png", 2);
+        zip.file(`backend/${outName}`, await resizeBlobFromBlob(srcBlob, fm.w, fm.h, "image/png"));
+      }
+    }
+
+    pl.textContent = "Zip oluşturuluyor..."; pc.textContent = "";
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = "zazar_web.zip";
+    a.click();
+
+    pw.style.display = "none"; btn.disabled = false;
+    btn.textContent = "✓ İndirildi — tekrar export et";
+
+  } catch (e) {
+    pl.textContent = `Hata: ${e.message}`;
+    btn.disabled = false;
+    console.error(e);
+  }
+}
+
+</script>
+</body>
+</html>
