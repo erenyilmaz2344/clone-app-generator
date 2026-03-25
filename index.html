@@ -594,16 +594,26 @@ async function renderIconPng(svgBlob, w, h, maskable) {
 }
 
 // ── EXPORT ───────────────────────────────────────────────────────────────────
-async function fetchFigmaExport(nodeId, format, scale = 1) {
+async function fetchFigmaExportBatch(nodeIds, format, scale = 1) {
+  const ids = nodeIds.join(",");
   const res = await fetch(
-    `https://api.figma.com/v1/images/${figmaFileId}?ids=${nodeId}&format=${format}&scale=${scale}`,
+    `https://api.figma.com/v1/images/${figmaFileId}?ids=${ids}&format=${format}&scale=${scale}`,
     { headers: { "X-Figma-Token": figmaToken } }
   );
   const data = await res.json();
-  const imgUrl = data.images?.[nodeId];
-  if (!imgUrl) throw new Error(`Image URL alınamadı: ${nodeId}`);
-  const imgRes = await fetch(imgUrl);
-  return await imgRes.blob();
+  const blobs = {};
+  await Promise.all(nodeIds.map(async id => {
+    const url = data.images?.[id];
+    if (!url) throw new Error(`Image URL alınamadı: ${id}`);
+    const r = await fetch(url);
+    blobs[id] = await r.blob();
+  }));
+  return blobs;
+}
+
+async function fetchFigmaExport(nodeId, format, scale = 1) {
+  const blobs = await fetchFigmaExportBatch([nodeId], format, scale);
+  return blobs[nodeId];
 }
 
 async function runExport() {
@@ -629,66 +639,86 @@ async function runExport() {
   zip.folder(`public_${appName}/img`);
 
   try {
-    for (const [frameName, fm] of Object.entries(fetchedFrames)) {
+    // ── 1. ADIM: Tüm frame'leri format bazında tek API isteğiyle toplu çek ──
+    pl.textContent = "Figma'dan çekiliyor..."; pw.style.display = "block";
+    const frames = Object.entries(fetchedFrames);
+    const svgIds = frames.filter(([,f]) => f.format === "svg").map(([,f]) => f.id);
+    const pngIds = frames.filter(([,f]) => f.format === "png").map(([,f]) => f.id);
+
+    // API'ye tek istek, URL'leri paralel indir
+    const [svgBlobs, pngBlobs] = await Promise.all([
+      svgIds.length ? fetchFigmaExportBatch(svgIds, "svg")    : Promise.resolve({}),
+      pngIds.length ? fetchFigmaExportBatch(pngIds, "png", 2) : Promise.resolve({}),
+    ]);
+    const allBlobs = { ...svgBlobs, ...pngBlobs };
+
+    // ── 2. ADIM: zip'e yaz (sıralı ama blob zaten hazır, sadece CPU işi) ──
+    for (const [frameName, fm] of frames) {
+      const blob = allBlobs[fm.id];
+      if (!blob) continue;
 
       // ── icon_assets SVG'leri ──
       if (fm.dest === "icon_assets" && fm.format === "svg" && fm.outputName !== "app_icon") {
         count++; upd(`${appName}-${fm.outputName}.svg`);
-        const svgBlob = await fetchFigmaExport(fm.id, "svg");
-        zip.file(`icon_assets/${appName}-${fm.outputName}.svg`, await svgBlob.text());
+        zip.file(`icon_assets/${appName}-${fm.outputName}.svg`, await blob.text());
 
       // ── app_icon → favicon + icons ──
       } else if (frameName === "app_icon") {
-        upd("app_icon SVG çekiliyor...");
-        const svgBlob = await fetchFigmaExport(fm.id, "svg");
-
         // safari-pinned-tab.svg
         count++; upd("safari-pinned-tab.svg");
-        zip.file(iconsF + "safari-pinned-tab.svg", await svgBlob.text());
+        zip.file(iconsF + "safari-pinned-tab.svg", await blob.text());
 
-        // favicon boyutları
-        const url = URL.createObjectURL(svgBlob);
+        // SVG → Image (bir kez yükle)
+        const url = URL.createObjectURL(blob);
         const svgImg = await new Promise(res => { const i=new Image(); i.onload=()=>res(i); i.src=url; });
         URL.revokeObjectURL(url);
 
-        for (const { suffix, w, h } of FAVICON_SIZES) {
-          count++; upd(`favicon${suffix}.png`);
+        // favicon boyutları — paralel canvas render
+        const faviconJobs = FAVICON_SIZES.map(({ suffix, w, h }) => new Promise(async res => {
           const dst = document.createElement("canvas"); dst.width=w; dst.height=h;
           dst.getContext("2d").drawImage(svgImg,0,0,w,h);
-          const png = await new Promise(res => dst.toBlob(res,"image/png"));
+          const png = await new Promise(r => dst.toBlob(r,"image/png"));
+          const ico = w === 512 ? png : await pngToIco(png, w, dst);
+          res({ suffix, w, h, png, ico, dst });
+        }));
+        const favResults = await Promise.all(faviconJobs);
+        for (const { suffix, w, png, ico } of favResults) {
+          count++; upd(`favicon${suffix}.png`);
           zip.file(pubF+`favicon${suffix}.png`, png);
           count++; upd(`favicon${suffix}.ico`);
-          if (w === 512) zip.file(pubF+`favicon${suffix}.ico`, png);
-          else zip.file(pubF+`favicon${suffix}.ico`, await pngToIco(png, w, dst));
+          zip.file(pubF+`favicon${suffix}.ico`, ico);
           if (suffix==="-16"||suffix==="-32") zip.file(iconsF+`favicon${suffix}.png`, png);
         }
 
-        // icon PNGs
-        for (const icon of ICON_FILES) {
+        // icon PNGs — paralel render
+        const iconJobs = ICON_FILES.map(icon =>
+          renderIconPng(blob, icon.w, icon.h, icon.maskable).then(png => ({ icon, png }))
+        );
+        const iconResults = await Promise.all(iconJobs);
+        for (const { icon, png } of iconResults) {
           count++; upd(icon.name);
-          zip.file(iconsF+icon.name, await renderIconPng(svgBlob, icon.w, icon.h, icon.maskable));
+          zip.file(iconsF+icon.name, png);
         }
 
-      // ── banners ──
+      // ── banners — paralel resize ──
       } else if (fm.sizes) {
-        upd(`${frameName} PNG çekiliyor...`);
-        const srcBlob = await fetchFigmaExport(fm.id, "png", 2); // 2x çek
-        for (const { suffix, w, h } of fm.sizes) {
-          count++; upd(`${fm.outputName}${suffix}.png`);
-          zip.file(bannersF+`${fm.outputName}${suffix}.png`, await resizeBlobFromBlob(srcBlob, w, h, "image/png"));
-          count++; upd(`${fm.outputName}${suffix}.webp`);
-          zip.file(bannersF+`${fm.outputName}${suffix}.webp`, await resizeBlobFromBlob(srcBlob, w, h, "image/webp"));
+        const bannerJobs = fm.sizes.flatMap(({ suffix, w, h }) => [
+          resizeBlobFromBlob(blob, w, h, "image/png" ).then(b => ({ path: bannersF+`${fm.outputName}${suffix}.png`,  b })),
+          resizeBlobFromBlob(blob, w, h, "image/webp").then(b => ({ path: bannersF+`${fm.outputName}${suffix}.webp`, b })),
+        ]);
+        const bannerResults = await Promise.all(bannerJobs);
+        for (const { path, b } of bannerResults) {
+          count++; upd(path.split("/").pop());
+          zip.file(path, b);
         }
 
       // ── backend ──
       } else {
         const outName = fm.outputName === null ? `${appName}.png` : `${fm.outputName}.png`;
         count++; upd(outName);
-        const srcBlob = await fetchFigmaExport(fm.id, "png", 2);
-        // w/h tanımlıysa o boyuta resize et, yoksa Figma'dan gelen gerçek boyutu kullan
         const outW = fm.w || Math.round(fm.width  || 512);
         const outH = fm.h || Math.round(fm.height || 512);
-        zip.file(`backend/${outName}`, await resizeBlobFromBlob(srcBlob, outW, outH, "image/png"));
+        zip.file(`backend/${outName}`, await resizeBlobFromBlob(blob, outW, outH, "image/png"));
       }
     }
 
