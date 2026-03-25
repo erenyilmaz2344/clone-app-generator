@@ -3,222 +3,298 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Asset Generator — Figma</title>
+<title>Asset Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pica@9.0.1/dist/pica.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --bg: #f5f5f4; --surface: #ffffff; --border: #e5e5e3; --border-hover: #d0d0ce;
-  --text: #1a1a18; --text-2: #6b6b68; --text-3: #a8a8a5; --accent-light: #f0f0ee;
-  --success: #16a34a; --success-bg: #f0fdf4; --success-border: #bbf7d0;
-  --error: #dc2626; --error-bg: #fef2f2; --error-border: #fecaca;
-  --figma: #9747ff; --figma-bg: #f5f0ff; --figma-border: #ddd0ff;
+  --bg: #111110; --s1: #1a1918; --s2: #222220; --s3: #2a2a27;
+  --bd: rgba(255,255,255,0.08); --bd2: rgba(255,255,255,0.14);
+  --t: #f0ede8; --t2: #888882; --t3: #444440;
+  --acc: #c8f135; --acc-d: rgba(200,241,53,0.09); --acc-b: rgba(200,241,53,0.28);
+  --ok: #c8f135; --ok-d: rgba(200,241,53,0.09); --ok-b: rgba(200,241,53,0.28);
+  --err: #ff6b6b; --err-d: rgba(255,107,107,0.09); --err-b: rgba(255,107,107,0.3);
+  --fig: #a78bfa; --fig-d: rgba(167,139,250,0.09); --fig-b: rgba(167,139,250,0.28);
+  --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif; --serif: 'Playfair Display', serif;
 }
-
 body {
-  min-height: 100vh; background: var(--bg);
-  font-family: 'Inter', sans-serif; color: var(--text);
-  display: flex; align-items: flex-start; justify-content: center;
-  padding: 48px 16px 80px;
+  min-height: 100vh; background: var(--bg); font-family: var(--sans); color: var(--t);
+  display: flex; flex-direction: column; align-items: center;
 }
 
-.container { width: 100%; max-width: 600px; }
+/* ── HERO ── */
+.hero {
+  width: 100%; max-width: 860px; padding: 64px 24px 52px;
+  text-align: center;
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 11px; color: var(--acc);
+  letter-spacing: 2px; margin-bottom: 28px;
+}
+.eyebrow-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--t3); }
+.hero-title {
+  font-family: var(--serif); font-size: clamp(44px, 7vw, 72px);
+  font-weight: 700; line-height: 1.08; letter-spacing: -1px; margin-bottom: 18px;
+}
+.hero-title em { font-style: italic; color: var(--acc); }
+.hero-sub { font-size: 15px; color: var(--t2); line-height: 1.6; max-width: 460px; margin: 0 auto 36px; }
+.hero-stats {
+  display: inline-flex; align-items: center; gap: 0;
+  border: 1px solid var(--bd); border-radius: 10px; overflow: hidden;
+}
+.stat { padding: 10px 22px; display: flex; align-items: baseline; gap: 7px; }
+.stat + .stat { border-left: 1px solid var(--bd); }
+.stat-val { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--t); }
+.stat-lbl { font-family: var(--mono); font-size: 11px; color: var(--t3); }
 
-/* header */
-.header { margin-bottom: 32px; }
-.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.logo { display: flex; align-items: center; gap: 10px; }
-.logo img { width: 28px; height: 28px; border-radius: 7px; object-fit: cover; }
-.logo-name { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
-.logo-badge { font-size: 10px; font-weight: 500; background: var(--figma-bg); color: var(--figma);
-  border: 1px solid var(--figma-border); border-radius: 4px; padding: 2px 7px;
-  font-family: 'JetBrains Mono', monospace; }
-.header-divider { height: 1px; background: var(--border); }
+/* ── MAIN GRID ── */
+.grid {
+  width: 100%; max-width: 860px; padding: 0 24px 80px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
 
-.reset-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-  font-size: 12px; color: var(--text-2); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s; }
-.reset-btn:hover { border-color: var(--border-hover); color: var(--text); }
+/* ── CARD ── */
+.card {
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: 16px; overflow: hidden;
+}
+.card-label {
+  font-family: var(--mono); font-size: 9px; font-weight: 500;
+  color: var(--t3); letter-spacing: 2px; text-transform: uppercase;
+  padding: 14px 18px 0;
+}
+.card-body { padding: 14px 18px 18px; }
 
-/* steps */
-.steps { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
-.step-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  overflow: hidden; transition: border-color .2s, box-shadow .2s; }
-.step-block.active { border-color: var(--border-hover); box-shadow: 0 1px 6px rgba(0,0,0,.05); }
-.step-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px;
-  border-bottom: 1px solid var(--border); background: #fafaf9; }
-.step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--bg);
-  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; color: var(--text-3); flex-shrink: 0; transition: all .2s; }
-.step-block.active .step-num { background: var(--text); border-color: var(--text); color: #fff; }
-.step-block.done .step-num { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
-.step-block.done .step-num::after { content: "✓"; }
-.step-block.done .step-num-inner { display: none; }
-.step-title { font-size: 13px; font-weight: 500; color: var(--text-2); }
-.step-block.active .step-title { color: var(--text); }
-.step-value { margin-left: auto; font-size: 11px; color: var(--text-2);
-  font-family: 'JetBrains Mono', monospace; background: var(--accent-light); padding: 2px 8px; border-radius: 4px; }
-.step-body { padding: 16px; }
+/* step indicator */
+.step-indicator {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 16px;
+}
+.si { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--t3); }
+.si.active { color: var(--t); }
+.si.done { color: var(--ok); }
+.si-num {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--t3); display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 600;
+}
+.si.active .si-num { border-color: var(--t); color: var(--t); }
+.si.done .si-num { border-color: var(--ok); color: var(--ok); }
+.si-sep { flex: 1; height: 1px; background: var(--bd); max-width: 18px; }
 
 /* inputs */
-.field-label { font-size: 10px; font-weight: 600; color: var(--text-3);
-  letter-spacing: .8px; text-transform: uppercase; margin-bottom: 5px; }
-.input-row { display: flex; gap: 8px; margin-bottom: 6px; }
-.text-input { flex: 1; padding: 9px 12px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
-  font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none;
-  transition: border-color .15s, box-shadow .15s; }
-.text-input:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(26,26,24,.07); }
-.text-input::placeholder { color: var(--text-3); }
-.text-input:disabled { background: var(--bg); opacity: .5; }
-.field-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
-.field-hint.ok { color: var(--success); }
-.field-hint.error { color: var(--error); }
-.name-preview { margin-top: 4px; font-size: 11px; color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
-.name-preview span { color: var(--text); font-weight: 500; }
-
-/* figma info box */
-.figma-info { margin-bottom: 14px; padding: 10px 13px;
-  background: var(--figma-bg); border: 1px solid var(--figma-border); border-radius: 8px;
-  font-size: 11px; color: var(--figma); font-family: 'JetBrains Mono', monospace; line-height: 1.8; }
-.figma-info strong { font-weight: 600; }
+.f-label { font-family: var(--mono); font-size: 9px; font-weight: 500;
+  color: var(--t3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.f-row { display: flex; gap: 7px; margin-bottom: 6px; }
+.inp {
+  flex: 1; padding: 9px 12px; background: var(--s2);
+  border: 1px solid var(--bd2); border-radius: 8px; color: var(--t);
+  font-family: var(--mono); font-size: 12px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.inp:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(200,241,53,.1); }
+.inp::placeholder { color: var(--t3); }
+.inp:disabled { opacity: .4; cursor: not-allowed; }
+.inp[type="password"] { letter-spacing: 2px; }
+.f-hint { font-size: 11px; color: var(--t3); margin-top: 4px; font-family: var(--mono); line-height: 1.5; }
+.f-hint.ok { color: var(--ok); }
+.f-hint.error { color: var(--err); }
+.name-preview { margin-top: 4px; font-size: 11px; color: var(--t2); font-family: var(--mono); }
+.name-preview span { color: var(--acc); }
 
 /* buttons */
-.btn-primary { padding: 8px 16px; background: var(--text); border: none; border-radius: 8px;
-  cursor: pointer; color: #fff; font-size: 12px; font-weight: 500;
-  font-family: 'Inter', sans-serif; transition: all .15s; white-space: nowrap; }
-.btn-primary:hover { background: #333; }
-.btn-primary:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; }
-.btn-danger { padding: 6px 10px; background: var(--error-bg); border: 1px solid var(--error-border);
-  border-radius: 8px; cursor: pointer; color: var(--error); font-size: 11px;
-  font-family: 'Inter', sans-serif; transition: all .15s; white-space: nowrap; }
-.btn-danger:hover { background: var(--error); color: #fff; }
-.btn-figma { padding: 9px 18px; background: var(--figma); border: none; border-radius: 8px;
-  cursor: pointer; color: #fff; font-size: 12px; font-weight: 500;
-  font-family: 'Inter', sans-serif; transition: opacity .15s;
-  display: flex; align-items: center; gap: 6px; }
-.btn-figma:hover { opacity: .88; }
-.btn-figma:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; opacity: 1; }
+.btn {
+  padding: 8px 15px; background: var(--s3); border: 1px solid var(--bd2);
+  border-radius: 8px; cursor: pointer; color: var(--t); font-size: 12px; font-weight: 500;
+  font-family: var(--sans); transition: all .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--bd2); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn-acc {
+  padding: 8px 15px; background: var(--acc); border: none;
+  border-radius: 8px; cursor: pointer; color: #111; font-size: 12px; font-weight: 600;
+  font-family: var(--sans); transition: opacity .15s; white-space: nowrap;
+}
+.btn-acc:hover { opacity: .88; }
+.btn-acc:disabled { background: var(--s3); color: var(--t3); cursor: not-allowed; opacity: 1; }
+.btn-fig {
+  width: 100%; padding: 10px; background: var(--fig); border: none;
+  border-radius: 9px; cursor: pointer; color: #fff; font-size: 12px; font-weight: 600;
+  font-family: var(--sans); transition: opacity .15s;
+  display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 4px;
+}
+.btn-fig:hover { opacity: .88; }
+.btn-fig:disabled { background: var(--s3); color: var(--t3); cursor: not-allowed; opacity: 1; }
+.btn-del {
+  padding: 8px 10px; background: transparent; border: 1px solid var(--err-b);
+  border-radius: 8px; cursor: pointer; color: var(--err); font-size: 11px;
+  font-family: var(--sans); transition: all .15s; white-space: nowrap;
+}
+.btn-del:hover { background: var(--err-d); }
 
-/* figma status */
+/* figma info */
+.fig-info {
+  margin: 12px 0; padding: 10px 13px;
+  background: var(--fig-d); border: 1px solid var(--fig-b);
+  border-radius: 8px; font-size: 11px; color: var(--fig);
+  font-family: var(--mono); line-height: 1.8;
+}
+.fig-info strong { font-weight: 600; color: var(--t); }
+
+/* status */
 .figma-status { margin-top: 12px; display: none; }
-.status-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-  border-radius: 8px; border: 1px solid var(--border); background: var(--bg);
-  font-size: 12px; color: var(--text-2); margin-bottom: 5px; }
-.status-row.ok { border-color: var(--success-border); background: var(--success-bg); color: var(--success); }
-.status-row.error { border-color: var(--error-border); background: var(--error-bg); color: var(--error); }
-.status-row.loading { border-color: var(--figma-border); background: var(--figma-bg); color: var(--figma); }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.status-frames { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.frame-tag { font-size: 10px; padding: 2px 7px; border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace; border: 1px solid var(--border);
-  background: var(--accent-light); color: var(--text-2); }
-.frame-tag.found { border-color: var(--success-border); background: var(--success-bg); color: var(--success); }
-.frame-tag.missing { border-color: var(--error-border); background: var(--error-bg); color: var(--error); }
+.status-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 11px;
+  border-radius: 8px; border: 1px solid var(--bd); background: var(--s2);
+  font-size: 11px; color: var(--t2); margin-bottom: 5px; font-family: var(--mono);
+}
+.status-row.ok  { border-color: var(--ok-b);  background: var(--ok-d);  color: var(--ok);  }
+.status-row.err { border-color: var(--err-b); background: var(--err-d); color: var(--err); }
+.status-row.loading { border-color: var(--fig-b); background: var(--fig-d); color: var(--fig); }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.status-frames { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.ftag {
+  font-size: 9px; padding: 2px 6px; border-radius: 4px;
+  font-family: var(--mono); border: 1px solid var(--bd); background: var(--s2); color: var(--t3);
+}
+.ftag.found   { border-color: var(--ok-b);  background: var(--ok-d);  color: var(--ok);  }
+.ftag.missing { border-color: var(--err-b); background: var(--err-d); color: var(--err); }
 
-/* progress + export */
+/* export */
 .progress-wrap { margin-bottom: 10px; display: none; }
 .progress-info { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.progress-label, .progress-count { font-size: 11px; color: var(--text-2); }
-.progress-bar-bg { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.progress-bar { height: 100%; background: var(--text); border-radius: 2px; transition: width .15s; width: 0%; }
-.export-btn { width: 100%; padding: 11px 0; background: var(--text); border: none; border-radius: 9px;
-  cursor: pointer; color: #fff; font-size: 13px; font-weight: 500;
-  font-family: 'Inter', sans-serif; transition: all .15s; }
-.export-btn:hover { background: #333; }
-.export-btn:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; }
-.hint { text-align: center; font-size: 11px; color: var(--text-3); margin-top: 7px; }
+.progress-label, .progress-count { font-size: 11px; color: var(--t2); font-family: var(--mono); }
+.progress-bar-bg { height: 2px; background: var(--bd2); border-radius: 2px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--acc); border-radius: 2px; transition: width .15s; width: 0%; }
+.export-btn {
+  width: 100%; padding: 12px; background: var(--acc); border: none;
+  border-radius: 10px; cursor: pointer; color: #111; font-size: 13px; font-weight: 600;
+  font-family: var(--sans); transition: opacity .15s;
+}
+.export-btn:hover { opacity: .88; }
+.export-btn:disabled { background: var(--s2); color: var(--t3); cursor: not-allowed; opacity: 1; border: 1px solid var(--bd); }
+.hint { text-align: center; font-size: 11px; color: var(--t3); margin-top: 7px; font-family: var(--mono); }
+
+/* reset */
+.reset-btn {
+  position: fixed; top: 18px; right: 24px;
+  display: flex; align-items: center; gap: 6px; padding: 7px 14px;
+  background: var(--s1); border: 1px solid var(--bd2); border-radius: 8px;
+  color: var(--t2); font-size: 12px; cursor: pointer; font-family: var(--sans); transition: all .15s;
+}
+.reset-btn:hover { color: var(--t); background: var(--s2); }
+
+/* full-width card */
+.card.full { grid-column: 1 / -1; }
 </style>
 </head>
 <body>
-<div class="container">
 
-  <div class="header">
-    <div class="header-top">
-      <div class="logo">
-        <img src="data:image/png;base64,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" alt="logo"/>
-        <span class="logo-name">Asset Generator</span>
-        <span class="logo-badge">Figma</span>
-      </div>
-      <button class="reset-btn" onclick="location.reload()">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Sıfırla
-      </button>
-    </div>
-    <div class="header-divider"></div>
+<button class="reset-btn" onclick="location.reload()">
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M10 6A4 4 0 1 1 6 2a4 4 0 0 1 2.83 1.17L10 2v4H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  Sıfırla
+</button>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="eyebrow">
+    <img src="data:image/png;base64,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" style="width:16px;height:16px;border-radius:3px;vertical-align:middle">
+    ÜCRETSİZ
+    <div class="eyebrow-dot"></div>
+    ANINDA
+    <div class="eyebrow-dot"></div>
+    FİGMA ENTEGRASYONLU
   </div>
+  <h1 class="hero-title">Clone app<br><em>asset</em> üreticisi</h1>
+  <p class="hero-sub">Figma'dan direkt çek. Sunucu yok, yükleme yok — her şey tarayıcıda çalışır.</p>
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-val">3</span><span class="stat-lbl">adım</span></div>
+    <div class="stat"><span class="stat-val">%100</span><span class="stat-lbl">istemci taraflı</span></div>
+    <div class="stat"><span class="stat-val">0 ms</span><span class="stat-lbl">bekleme</span></div>
+  </div>
+</div>
 
-  <div class="steps">
+<!-- GRID -->
+<div class="grid">
 
-    <!-- STEP 1 -->
-    <div class="step-block active" id="step1">
-      <div class="step-head">
-        <div class="step-num"><span class="step-num-inner">1</span></div>
-        <span class="step-title">Uygulama ismi</span>
-        <span class="step-value" id="appNameDisplay" style="display:none"></span>
+  <!-- SOL: ADIM 1 + 2 -->
+  <div class="card">
+    <div class="card-label">Yapılandırma</div>
+    <div class="card-body">
+
+      <div class="step-indicator">
+        <div class="si active" id="nav1"><div class="si-num">1</div>isim</div>
+        <div class="si-sep"></div>
+        <div class="si" id="nav2"><div class="si-num">2</div>figma</div>
+        <div class="si-sep"></div>
+        <div class="si" id="nav3"><div class="si-num">3</div>export</div>
       </div>
-      <div class="step-body">
-        <div class="field-label">APP NAME</div>
-        <div class="input-row">
-          <input class="text-input" id="appNameInput" type="text" placeholder="örn: klaso" maxlength="40"
+
+      <!-- step 1 -->
+      <div id="panel-name">
+        <div class="f-label">Uygulama ismi</div>
+        <div class="f-row">
+          <input class="inp" id="appNameInput" type="text" placeholder="örn: klaso" maxlength="40"
             oninput="onNameInput(this)" onkeydown="if(event.key==='Enter') confirmName()"/>
-          <button class="btn-primary" id="confirmNameBtn" disabled onclick="confirmName()">Onayla</button>
+          <button class="btn-acc" id="confirmNameBtn" disabled onclick="confirmName()">Onayla</button>
         </div>
-        <div class="field-hint" id="nameHint">küçük harf · bitişik · a-z 0-9</div>
+        <div class="f-hint" id="nameHint">lowercase · a-z 0-9 · no spaces</div>
         <div class="name-preview" id="namePreview"></div>
       </div>
-    </div>
 
-    <!-- STEP 2 -->
-    <div class="step-block" id="step2">
-      <div class="step-head">
-        <div class="step-num"><span class="step-num-inner">2</span></div>
-        <span class="step-title">Figma bağlantısı</span>
-      </div>
-      <div class="step-body">
-
-        <div class="field-label">PERSONAL ACCESS TOKEN</div>
-        <div class="input-row">
-          <input class="text-input" id="figmaToken" type="password" placeholder="figd_..."
+      <!-- step 2 -->
+      <div id="panel-figma" style="display:none">
+        <div class="f-label" style="margin-bottom:5px">Personal Access Token</div>
+        <div class="f-row">
+          <input class="inp" id="figmaToken" type="password" placeholder="figd_..."
             oninput="localStorage.setItem('figma_token', this.value)"/>
-          <button class="btn-danger" onclick="clearToken()">Sil</button>
+          <button class="btn-del" onclick="clearToken()">Sil</button>
         </div>
-        <div class="field-hint" id="tokenHint" style="margin-bottom:14px">
-          Figma → Settings → Security → Personal access tokens
+        <div class="f-hint" id="tokenHint" style="margin-bottom:12px">Figma → Settings → Security → Personal access tokens</div>
+
+        <div class="f-label" style="margin-bottom:5px">Figma File URL</div>
+        <div class="f-row">
+          <input class="inp" id="figmaUrl" type="text" placeholder="https://www.figma.com/file/..."/>
         </div>
 
-        <div class="field-label">FIGMA FILE URL</div>
-        <div class="input-row">
-          <input class="text-input" id="figmaUrl" type="text" placeholder="https://www.figma.com/file/..."/>
-        </div>
-
-        <div class="figma-info" style="margin-top:14px">
-          <strong>Figma'da olması gereken frame isimleri:</strong><br>
+        <div class="fig-info">
+          <strong>Gerekli frame isimleri:</strong><br>
           app_icon · global · app_perspective<br>
           bottom-background-img · bottom-logo · center-img<br>
           first-purchase-center-img-a · logo · renewal_bonus_center_img<br>
           + adım 1'de girdiğin isim (backend icon)
         </div>
 
-        <button class="btn-figma" id="connectBtn" onclick="connectFigma()">
+        <button class="btn-fig" id="connectBtn" onclick="connectFigma()">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="white" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Bağlan & frame'leri çek
         </button>
-
         <div class="figma-status" id="figmaStatus"></div>
       </div>
-    </div>
 
-    <!-- STEP 3 -->
-    <div class="step-block" id="step3">
-      <div class="step-head">
-        <div class="step-num"><span class="step-num-inner">3</span></div>
-        <span class="step-title">Export</span>
+    </div>
+  </div>
+
+  <!-- SAĞ: EXPORT -->
+  <div class="card">
+    <div class="card-label">Export</div>
+    <div class="card-body" style="height:100%;display:flex;flex-direction:column;justify-content:space-between">
+
+      <div id="export-idle" style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px 0">
+        <div style="text-align:center">
+          <div style="width:48px;height:48px;border-radius:12px;background:var(--s2);border:1px dashed var(--bd2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/></svg>
+          </div>
+          <div style="font-size:12px;color:var(--t3);font-family:var(--mono);line-height:1.7">
+            Figma'ya bağlandıktan<br>sonra export alabilirsin
+          </div>
+        </div>
       </div>
-      <div class="step-body">
+
+      <div id="export-active" style="display:none">
         <div class="progress-wrap" id="progressWrap">
           <div class="progress-info">
             <span class="progress-label" id="progressLabel"></span>
@@ -226,12 +302,13 @@ body {
           </div>
           <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
         </div>
-        <button class="export-btn" id="exportBtn" disabled onclick="runExport()">Önce Figma'ya bağlan</button>
+        <button class="export-btn" id="exportBtn" disabled onclick="runExport()">Export</button>
         <p class="hint" id="hint"></p>
       </div>
-    </div>
 
+    </div>
   </div>
+
 </div>
 
 <script>
@@ -262,10 +339,10 @@ const FRAME_MAP = [
   { name: "_appname_-text-logo",  dest: "icon_assets", format: "svg", outputName: "text-logo"   },
   // backend — frame isimleri Figma'daki gibi bırakıldı, outputName = dosya adı
   { name: "bottom-background-img",       dest: "backend", format: "png", outputName: "bottom-background-img",       w: 594, h: 594 },
-  { name: "bottom-logo",                 dest: "backend", format: "png", outputName: "bottom-logo",                 w: 348, h: 73  },
+  { name: "bottom-logo",                 dest: "backend", format: "png", outputName: "bottom-logo" },
   { name: "center-img",                  dest: "backend", format: "png", outputName: "center-img",                  w: 981, h: 567 },
   { name: "first-purchase-center-img-a", dest: "backend", format: "png", outputName: "first-purchase-center-img-a", w: 981, h: 567 },
-  { name: "logo",                        dest: "backend", format: "png", outputName: "logo",                        w: 348, h: 73  },
+  { name: "logo",                        dest: "backend", format: "png", outputName: "logo" },
   { name: "renewal_bonus_center_img",    dest: "backend", format: "png", outputName: "renewal_bonus_center_img",    w: 981, h: 567 },
   // appname.png — frame adı dinamik, step 1'deki isimden gelir
   { name: "_appname_",                   dest: "backend", format: "png", outputName: null, w: 512,  h: 512  },
@@ -343,10 +420,9 @@ function confirmName() {
   document.getElementById("confirmNameBtn").disabled = true;
   document.getElementById("nameHint").style.display = "none";
   document.getElementById("namePreview").style.display = "none";
-  const disp = document.getElementById("appNameDisplay");
-  disp.textContent = appName; disp.style.display = "inline-block";
+  
   document.getElementById("step1").classList.replace("active", "done");
-  document.getElementById("step2").classList.add("active");
+  
 }
 
 // ── STEP 2: FIGMA ─────────────────────────────────────────────────────────────
@@ -434,8 +510,8 @@ async function connectFigma() {
     }
 
     showFrameStatus(found, missing);
-    document.getElementById("step2").classList.replace("active", "done");
-    document.getElementById("step3").classList.add("active");
+    
+    
 
     const total = calcExportTotal();
     document.getElementById("exportBtn").disabled = false;
@@ -518,28 +594,16 @@ async function renderIconPng(svgBlob, w, h, maskable) {
 }
 
 // ── EXPORT ───────────────────────────────────────────────────────────────────
-// Tüm node'ları tek API isteğiyle çek, sonra paralel download
-async function fetchFigmaExportBatch(nodeIds, format, scale = 1) {
-  const ids = nodeIds.join(",");
+async function fetchFigmaExport(nodeId, format, scale = 1) {
   const res = await fetch(
-    `https://api.figma.com/v1/images/${figmaFileId}?ids=${ids}&format=${format}&scale=${scale}`,
+    `https://api.figma.com/v1/images/${figmaFileId}?ids=${nodeId}&format=${format}&scale=${scale}`,
     { headers: { "X-Figma-Token": figmaToken } }
   );
   const data = await res.json();
-  // Tüm URL'leri paralel indir
-  const blobs = {};
-  await Promise.all(nodeIds.map(async id => {
-    const url = data.images?.[id];
-    if (!url) throw new Error(`Image URL alınamadı: ${id}`);
-    const r = await fetch(url);
-    blobs[id] = await r.blob();
-  }));
-  return blobs;
-}
-
-async function fetchFigmaExport(nodeId, format, scale = 1) {
-  const blobs = await fetchFigmaExportBatch([nodeId], format, scale);
-  return blobs[nodeId];
+  const imgUrl = data.images?.[nodeId];
+  if (!imgUrl) throw new Error(`Image URL alınamadı: ${nodeId}`);
+  const imgRes = await fetch(imgUrl);
+  return await imgRes.blob();
 }
 
 async function runExport() {
@@ -565,27 +629,18 @@ async function runExport() {
   zip.folder(`public_${appName}/img`);
 
   try {
-    // Tüm frame'leri format gruplarına göre toplu çek
-    pl.textContent = "Figma'dan görseller çekiliyor..."; pw.style.display = "block";
-    const frames = Object.entries(fetchedFrames);
-    const svgIds  = frames.filter(([,f]) => f.format === "svg").map(([,f]) => f.id);
-    const pngIds  = frames.filter(([,f]) => f.format === "png").map(([,f]) => f.id);
-
-    const svgBlobs = svgIds.length ? await fetchFigmaExportBatch(svgIds, "svg") : {};
-    const pngBlobs = pngIds.length ? await fetchFigmaExportBatch(pngIds, "png", 2) : {};
-    const allBlobs = { ...svgBlobs, ...pngBlobs };
-
-    for (const [frameName, fm] of frames) {
+    for (const [frameName, fm] of Object.entries(fetchedFrames)) {
 
       // ── icon_assets SVG'leri ──
       if (fm.dest === "icon_assets" && fm.format === "svg" && fm.outputName !== "app_icon") {
         count++; upd(`${appName}-${fm.outputName}.svg`);
-        const svgBlob = allBlobs[fm.id];
+        const svgBlob = await fetchFigmaExport(fm.id, "svg");
         zip.file(`icon_assets/${appName}-${fm.outputName}.svg`, await svgBlob.text());
 
       // ── app_icon → favicon + icons ──
       } else if (frameName === "app_icon") {
-        const svgBlob = allBlobs[fm.id];
+        upd("app_icon SVG çekiliyor...");
+        const svgBlob = await fetchFigmaExport(fm.id, "svg");
 
         // safari-pinned-tab.svg
         count++; upd("safari-pinned-tab.svg");
@@ -616,7 +671,8 @@ async function runExport() {
 
       // ── banners ──
       } else if (fm.sizes) {
-        const srcBlob = allBlobs[fm.id];
+        upd(`${frameName} PNG çekiliyor...`);
+        const srcBlob = await fetchFigmaExport(fm.id, "png", 2); // 2x çek
         for (const { suffix, w, h } of fm.sizes) {
           count++; upd(`${fm.outputName}${suffix}.png`);
           zip.file(bannersF+`${fm.outputName}${suffix}.png`, await resizeBlobFromBlob(srcBlob, w, h, "image/png"));
@@ -628,8 +684,11 @@ async function runExport() {
       } else {
         const outName = fm.outputName === null ? `${appName}.png` : `${fm.outputName}.png`;
         count++; upd(outName);
-        const srcBlob = allBlobs[fm.id];
-        zip.file(`backend/${outName}`, await resizeBlobFromBlob(srcBlob, fm.w, fm.h, "image/png"));
+        const srcBlob = await fetchFigmaExport(fm.id, "png", 2);
+        // w/h tanımlıysa o boyuta resize et, yoksa Figma'dan gelen gerçek boyutu kullan
+        const outW = fm.w || Math.round(fm.width  || 512);
+        const outH = fm.h || Math.round(fm.height || 512);
+        zip.file(`backend/${outName}`, await resizeBlobFromBlob(srcBlob, outW, outH, "image/png"));
       }
     }
 
@@ -650,6 +709,66 @@ async function runExport() {
   }
 }
 
+
+// confirmName override — yeni panel yapısı
+confirmName = function() {
+  const val = document.getElementById("appNameInput").value;
+  if (val.length < 2) return;
+  appName = val;
+  document.getElementById("appNameInput").disabled = true;
+  document.getElementById("confirmNameBtn").disabled = true;
+  document.getElementById("nameHint").style.display = "none";
+  document.getElementById("namePreview").style.display = "none";
+  const _n1 = document.getElementById("nav1");
+  const _n2 = document.getElementById("nav2");
+  if (_n1) { _n1.classList.remove("active"); _n1.classList.add("done"); }
+  if (_n2) _n2.classList.add("active");
+  const _pn = document.getElementById("panel-name");
+  const _pf = document.getElementById("panel-figma");
+  if (_pn) _pn.style.display = "none";
+  if (_pf) _pf.style.display = "block";
+  // token hatırla
+  const saved = localStorage.getItem("figma_token");
+  if (saved) {
+    document.getElementById("figmaToken").value = saved;
+    document.getElementById("tokenHint").innerHTML = 'Token kaydedilmiş &nbsp;<span style="color:var(--ok)">✓ hatırlandı</span>';
+  }
+};
+
+// connectFigma sonrası export paneli aç
+const _origConnect = connectFigma;
+connectFigma = async function() {
+  await _origConnect();
+  const status = document.getElementById("figmaStatus");
+  if (status && status.querySelector(".ok")) {
+    const n2 = document.getElementById("nav2");
+    const n3 = document.getElementById("nav3");
+    if (n2) { n2.classList.remove("active"); n2.classList.add("done"); }
+    if (n3) n3.classList.add("active");
+    const idle   = document.getElementById("export-idle");
+    const active = document.getElementById("export-active");
+    if (idle)   idle.style.display = "none";
+    if (active) active.style.display = "block";
+  }
+};
+
+function clearToken() {
+  localStorage.removeItem("figma_token");
+  document.getElementById("figmaToken").value = "";
+  document.getElementById("tokenHint").textContent = "Figma → Settings → Security → Personal access tokens";
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("figma_token");
+  if (saved) {
+    const inp = document.getElementById("figmaToken");
+    if (inp) {
+      inp.value = saved;
+      const hint = document.getElementById("tokenHint");
+      if (hint) hint.innerHTML = 'Token kaydedilmiş &nbsp;<span style="color:var(--ok)">✓ hatırlandı</span>';
+    }
+  }
+});
 </script>
 </body>
 </html>
