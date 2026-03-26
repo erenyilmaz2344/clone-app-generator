@@ -198,6 +198,25 @@ body {
   Sıfırla
 </button>
 
+<!-- HERO -->
+<div class="hero">
+  <div class="eyebrow">
+    <img src="data:image/png;base64,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" style="width:16px;height:16px;border-radius:3px;vertical-align:middle">
+    ÜCRETSİZ
+    <div class="eyebrow-dot"></div>
+    ANINDA
+    <div class="eyebrow-dot"></div>
+    FİGMA ENTEGRASYONLU
+  </div>
+  <h1 class="hero-title">Clone app<br><em>asset</em> üreticisi</h1>
+  <p class="hero-sub">Figma'dan direkt çek. Sunucu yok, yükleme yok — her şey tarayıcıda çalışır.</p>
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-val">3</span><span class="stat-lbl">adım</span></div>
+    <div class="stat"><span class="stat-val">%100</span><span class="stat-lbl">istemci taraflı</span></div>
+    <div class="stat"><span class="stat-val">0 ms</span><span class="stat-lbl">bekleme</span></div>
+  </div>
+</div>
+
 <!-- GRID -->
 <div class="grid">
 
