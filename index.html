@@ -402,11 +402,21 @@ function calcExportTotal() {
 
 const picaInstance = pica({ features: ["js","wasm","ww"] });
 
+// Blob → src canvas cache (aynı blob'u defalarca decode etmemek için)
+const _srcCache = new Map();
+async function getSrcCanvas(blob) {
+  if (!_srcCache.has(blob)) {
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement("canvas");
+    c.width = bmp.width; c.height = bmp.height;
+    c.getContext("2d").drawImage(bmp, 0, 0);
+    _srcCache.set(blob, c);
+  }
+  return _srcCache.get(blob);
+}
+
 async function resizeBlobFromBlob(srcBlob, w, h, mime) {
-  const bmp = await createImageBitmap(srcBlob);
-  const src = document.createElement("canvas");
-  src.width = bmp.width; src.height = bmp.height;
-  src.getContext("2d").drawImage(bmp, 0, 0);
+  const src = await getSrcCanvas(srcBlob);
   const dst = document.createElement("canvas"); dst.width = w; dst.height = h;
   await picaInstance.resize(src, dst, { filter:"lanczos3", unsharpAmount:80, unsharpRadius:.6, unsharpThreshold:2, alpha:true });
   return await new Promise(res => dst.toBlob(res, mime === "image/webp" ? "image/webp" : "image/png"));
@@ -494,6 +504,7 @@ async function runExport() {
     ]);
     const allBlobs = { ...svgBlobs, ...pngBlobs };
 
+    const backendJobs = [];
     for (const [frameName, fm] of frames) {
       const blob = allBlobs[fm.id];
       if (!blob) continue;
@@ -547,11 +558,22 @@ async function runExport() {
         }
 
       } else {
+        backendJobs.push({ blob, fm });
+      }
+    }
+
+    // Backend frame'leri paralel resize
+    if (backendJobs.length) {
+      const results = await Promise.all(backendJobs.map(async ({ blob, fm }) => {
         const outName = fm.outputName === null ? `${appName}.png` : `${fm.outputName}.png`;
-        count++; upd(outName);
         const outW = fm.w || Math.round(fm.width  || 512);
         const outH = fm.h || Math.round(fm.height || 512);
-        zip.file(`backend/${outName}`, await resizeBlobFromBlob(blob, outW, outH, "image/png"));
+        const b = await resizeBlobFromBlob(blob, outW, outH, "image/png");
+        return { outName, b };
+      }));
+      for (const { outName, b } of results) {
+        count++; upd(outName);
+        zip.file(`backend/${outName}`, b);
       }
     }
 
